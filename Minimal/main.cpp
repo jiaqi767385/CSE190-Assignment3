@@ -662,7 +662,7 @@ public:
 
 	/* Render sphere at User's Dominant Hand's Controller Position */
 	void render(const glm::mat4& projection, const glm::mat4& view) {
-		glm::mat4 toWorld = glm::translate(glm::mat4(1.0f), position) * glm::scale(glm::mat4(1.0f), glm::vec3(0.005f));
+		glm::mat4 toWorld = glm::translate(glm::mat4(1.0f), position) * glm::scale(glm::mat4(1.0f), glm::vec3(0.01f));
 		cursor->Draw(shaderID, projection, view, toWorld);
 	}
 
@@ -686,7 +686,6 @@ class Scene {
 	// Dots
 	std::unique_ptr<Cursor> LeftEyeCursor;
 	std::unique_ptr<Cursor> RightEyeCursor;
-	std::unique_ptr<Cursor> ControllerCursor;
 	
 	// ShaderID
 	GLint shaderID, skyboxShaderID, lineShaderID;
@@ -702,6 +701,8 @@ public:
 
 	// Cube
 	std::unique_ptr<TexturedCube> cube;
+	std::vector<glm::mat4> instance_positions;
+	GLuint instanceCount;
 	// Cube Size and Position
 	float cubeSize;
 	glm::vec3 cubePos;
@@ -743,7 +744,7 @@ public:
 		// Cursors
 		LeftEyeCursor = std::unique_ptr<Cursor>(new Cursor());
 		RightEyeCursor = std::unique_ptr<Cursor>(new Cursor());
-		ControllerCursor = std::unique_ptr<Cursor>(new Cursor());
+		
 
 		// ShaderID
 		shaderID = LoadShaders("shader.vert", "shader.frag");
@@ -831,9 +832,13 @@ public:
 		self_skybox->toWorld = glm::scale(glm::mat4(1.0f), glm::vec3(5.0f));	
 
 		// Cube
+		instance_positions.push_back(glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, -0.3f)));
+		instance_positions.push_back(glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, -0.9f)));
+		instanceCount = instance_positions.size();
+
 		cube = std::make_unique<TexturedCube>("cube");
 		cubeSize = 0.1f; //20 cm
-		cubePos = glm::vec3(0.0f, 0.0f, -0.15f); // Origin Position
+		
 		cube->toWorld = glm::translate(glm::mat4(1.0f), cubePos) * glm::scale(glm::mat4(1.0f), glm::vec3(cubeSize));
 		
 
@@ -871,7 +876,11 @@ public:
 		if (buttonX == 0 || curEyeIdx * 3 != randNum) {
 			glUseProgram(skyboxShaderID);
 			skybox->draw(skyboxShaderID, getProjection(eyePos, pa, pb, pc, nearPlane, farPlane), modelview);
-			cube->draw(skyboxShaderID, getProjection(eyePos, pa, pb, pc, nearPlane, farPlane), modelview);
+			//cube->draw(skyboxShaderID, getProjection(eyePos, pa, pb, pc, nearPlane, farPlane), modelview);
+			for (unsigned int i = 0; i < instanceCount; i++) {
+				cube->toWorld =  instance_positions[i] * glm::scale(glm::mat4(1.0f), glm::vec3(cubeSize));
+				cube->draw(skyboxShaderID, getProjection(eyePos, pa, pb, pc, nearPlane, farPlane), modelview);
+			}
 		}
 		
 		
@@ -901,7 +910,11 @@ public:
 		if (buttonX == 0 || curEyeIdx * 3 + 1 != randNum) {
 			glUseProgram(skyboxShaderID);
 			skybox->draw(skyboxShaderID, getProjection(eyePos, pa, pb, pc, nearPlane, farPlane), modelview);
-			cube->draw(skyboxShaderID, getProjection(eyePos, pa, pb, pc, nearPlane, farPlane), modelview);
+			//cube->draw(skyboxShaderID, getProjection(eyePos, pa, pb, pc, nearPlane, farPlane), modelview);
+			for (unsigned int i = 0; i < instanceCount; i++) {
+				cube->toWorld = instance_positions[i] * glm::scale(glm::mat4(1.0f), glm::vec3(cubeSize));
+				cube->draw(skyboxShaderID, getProjection(eyePos, pa, pb, pc, nearPlane, farPlane), modelview);
+			}
 		}
 
 		
@@ -934,7 +947,11 @@ public:
 		if (buttonX == 0 || (curEyeIdx * 3 + 2) != randNum) {
 			glUseProgram(skyboxShaderID);
 			skybox->draw(skyboxShaderID, getProjection(eyePos, pa, pb, pc, nearPlane, farPlane), modelview);
-			cube->draw(skyboxShaderID, getProjection(eyePos, pa, pb, pc, nearPlane, farPlane), modelview);
+			//cube->draw(skyboxShaderID, getProjection(eyePos, pa, pb, pc, nearPlane, farPlane), modelview);
+			for (unsigned int i = 0; i < instanceCount; i++) {
+				cube->toWorld = instance_positions[i] * glm::scale(glm::mat4(1.0f), glm::vec3(cubeSize));
+				cube->draw(skyboxShaderID, getProjection(eyePos, pa, pb, pc, nearPlane, farPlane), modelview);
+			}
 		}
 		
 
@@ -1135,28 +1152,38 @@ protected:
 			}
 			// Cube Motion
 			if (inputState.Buttons & ovrButton_RThumb) {
-				scene->cubePos = glm::vec3(0.0f, 0.0f, -0.15f);
+				//scene->cubePos = glm::vec3(0.0f, 0.0f, -0.15f);
+				scene->instance_positions[0][3] = glm::vec4(0.0f, 0.0f, -0.3f, 1.0f);
+				scene->instance_positions[1][3] = glm::vec4(0.0f, 0.0f, -0.9f, 1.0f);
 			}
 			else {
 				// x-axis
 				if (scene->cubeSize < 0.25f && inputState.Thumbstick[ovrHand_Right].x > 0.5f) {
-					scene->cubePos.x += 0.001f;
+					//scene->cubePos.x += 0.001f;
+					scene->instance_positions[0][3][0] += 0.001f;
+					scene->instance_positions[1][3][0] += 0.001f;
 				}
 				else if (scene->cubeSize > 0.005f && inputState.Thumbstick[ovrHand_Right].x < -0.5f) {
-					scene->cubePos.x -= 0.001f;
+					//scene->cubePos.x -= 0.001f;
+					scene->instance_positions[0][3][0] -= 0.001f;
+					scene->instance_positions[1][3][0] -= 0.001f;
 				}
 				// z-axis
 				if (scene->cubeSize < 0.25f && inputState.Thumbstick[ovrHand_Right].y > 0.5f) {
-					scene->cubePos.z += 0.001f;
+					//scene->cubePos.z += 0.001f;
+					scene->instance_positions[0][3][2] += 0.001f;
+					scene->instance_positions[1][3][2] += 0.001f;
 				}
 				else if (scene->cubeSize > 0.005f && inputState.Thumbstick[ovrHand_Right].y < -0.5f) {
-					scene->cubePos.z -= 0.001f;
+					//scene->cubePos.z -= 0.001f;
+					scene->instance_positions[0][3][2] -= 0.001f;
+					scene->instance_positions[1][3][2] -= 0.001f;
 				}
 			}			
 		}
 
 		// Update Cube
-		scene->cube->toWorld = glm::translate(glm::mat4(1.0f), scene->cubePos) * glm::scale(glm::mat4(1.0f), glm::vec3(scene->cubeSize));
+		//scene->cube->toWorld = glm::translate(glm::mat4(1.0f), scene->cubePos) * glm::scale(glm::mat4(1.0f), glm::vec3(scene->cubeSize));
 
 	}
 
@@ -1170,10 +1197,12 @@ protected:
 
 			if (FreezeMode() == 0) {
 				no_rotation[3] = RightHandPose[3];
+				//no_rotation = RightHandPose;
 				prevRightHandPose = RightHandPose;
 			}
 			else {
 				no_rotation[3] = prevRightHandPose[3]; // Freeze
+				//no_rotation = prevRightHandPose;
 			}
 
 			/* Note that because we're rendering in stereo, you'll need to create two camera (=eye) positions at the controller, one offset to the left, 
